@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="aws.nyao.xyz" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="aws.nyao.xyz">
+        <serverdata>
+          <mappings>
+            <mapping deploy="dist" local="$PROJECT_DIR$/dist" web="/" />
+            <mapping deploy="wana_home_back" local="$PROJECT_DIR$/wana_home_back" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/wana_home_back/venv" />
+            <excludedPath local="true" path="$PROJECT_DIR$/wana_home_back/scripts" />
+            <excludedPath local="true" path="$PROJECT_DIR$/wana_home_back/db.sqlite3" />
+            <excludedPath path="/wana_home_back/venv" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

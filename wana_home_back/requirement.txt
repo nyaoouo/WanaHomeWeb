@@ -1,0 +1,4 @@
+django
+requests
+uwsgi
+pycryptodome

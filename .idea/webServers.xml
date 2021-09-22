@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="3d8106bb-1d8e-4602-be9c-7d018210f7f9" name="aws.nyao.xyz">
+        <fileTransfer rootFolder="/www/wwwroot/wanahome" accessType="SFTP" host="aws.nyao.xyz" port="22" sshConfigId="59cfdf26-abe7-4174-8c60-c3a2ae2f3403" sshConfig="centos@aws.nyao.xyz:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
