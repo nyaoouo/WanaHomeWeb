@@ -22,14 +22,10 @@
 import {Component, Vue} from 'vue-property-decorator';
 import {addOverlayListener, removeOverlayListener} from "@/libs/Ngld";
 import {sync_ngld} from "@/axios";
-import {servers, territories} from "@/libs/WardLandDefine";
+import {servers, territories,HouseSimple} from "@/libs/WardLandDefine";
 import {toast} from "@/libs/toast_bv";
 import {sign} from "@/libs/encrypt"
 
-interface House {
-    price: number
-    owner: string
-}
 
 interface StoreToken {
     [world_id: string]: string
@@ -40,7 +36,7 @@ interface WardLandInfo {
     ward_id: number
     territory_id: number
     server: number
-    houses: House[]
+    houses: HouseSimple[]
 }
 
 

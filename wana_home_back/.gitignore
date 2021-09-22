@@ -3,6 +3,8 @@ gen.config.ini
 upload.ini
 gen.upload.ini
 scripts/
+ignore*
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/

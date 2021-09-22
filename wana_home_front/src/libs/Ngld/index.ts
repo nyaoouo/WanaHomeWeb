@@ -203,7 +203,7 @@ export const init = (): void => {
         wsUrl = /[\?&]OVERLAY_WS=([^&]+)/.exec(window.location.href);
         if (wsUrl) {
             const connectWs = function () {
-                ws = new WebSocket(wsUrl?.[1] as string);
+                ws = new WebSocket(decodeURIComponent(wsUrl?.[1] as string));
 
                 ws.addEventListener('error', (e) => {
                     console.error(e);

@@ -1,8 +1,8 @@
-import {House} from "@/libs/WardLandDefine";
+import {HouseSimple} from "@/libs/WardLandDefine";
 
 declare const Buffer: any;
 
-export function sign(token: string, data: House[]) {
+export function sign(token: string, data: HouseSimple[]) {
     let new_data = Array(data.length)
     data.forEach((house, idx) => {
         new_data[idx] = [house.owner, house.price]

@@ -6,7 +6,10 @@ export interface House {
     'price': number,
     'owner': string,
 }
-
+export interface HouseSimple {
+    price: number
+    owner: string
+}
 export const territories: { [k: number]: { full: string, short: string } } = {
     339: {full: "海雾村", short: "海"},
     341: {full: "高脚孤丘", short: "沙"},
