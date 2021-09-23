@@ -22,8 +22,12 @@ api.interceptors.response.use((response) => response, (error) => {
             })
             return
         }
-        throw error
+        else if (error.response.status == 409) {
+            window.location.reload(true)
+            return
+        }
     }
+    throw error
 });
 
 
