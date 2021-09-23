@@ -7,7 +7,7 @@
         <hr/>
         <b-row cols="1" cols-md="2">
             <b-col>
-                <b-table striped hover :items="onsale" :busy="onsale.length<1" :fields="on_sale_fields" table-class="text-center">
+                <b-table sticky-header="80vh" striped hover :items="onsale" :busy="onsale.length<1" :fields="on_sale_fields" table-class="text-center">
                     <template #cell(house)="data" class="text-right">
                         <house-label :house="data.item"/>
                     </template>
@@ -112,7 +112,9 @@ export default class ServerState extends Vue {
     background-color: rgba(255, 255, 255, 0.3)
 
 }
-
+.table.b-table > thead > tr > .table-b-table-default, .table.b-table > tbody > tr > .table-b-table-default, .table.b-table > tfoot > tr > .table-b-table-default{
+    background-color: rgba(255, 255, 255, 0.7)
+}
 .list-group {
     max-height: 80vh;
     overflow: auto;
