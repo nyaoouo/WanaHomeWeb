@@ -37,7 +37,7 @@
                     <b-form-select @change="reload_array()" v-model="show_level"
                                    :options="size_options" style="max-width: 150px"/>
                     <b-btn v-b-tooltip.hover title="清除记录"
-                           class="mx-2" @click="empty_record=[]" variant="outline-danger">
+                           class="mx-2" @click="empty_record={};empty_array=[];" variant="outline-danger">
                         <b-icon-trash/>
                     </b-btn>
                 </b-col>
@@ -197,7 +197,6 @@ export default class Ngld extends Vue {
             const start_idx = 2 + i * 10;
             let owner = decoder.decode(new Uint32Array(buffer.slice(start_idx + 2, start_idx + 10)))
                 .replace(/\u0000+$/, '');
-            if (buffer[start_idx + 1] & 0b10000) owner = `《${owner}》`;
             const price = buffer[start_idx];
 
             const key = `${ward_land_info.server}|${ward_land_info.territory_id}|${ward_land_info.ward_id}|${ward_land_info.houses.length}`
@@ -213,7 +212,10 @@ export default class Ngld extends Vue {
                     price: price,
                     size: this._house_size(price),
                 }
-            else if (key in this.empty_record) delete this.empty_record[key]
+            else {
+                if (key in this.empty_record) delete this.empty_record[key]
+                if (buffer[start_idx + 1] & 0b10000) owner = `《${owner}》`;
+            }
             ward_land_info.houses.push({price: price, owner: owner});
         }
         this.reload_array()
