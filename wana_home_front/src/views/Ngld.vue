@@ -1,31 +1,80 @@
 <template>
-    <div style="max-width: 90%;">
-        <h3>已加载令牌：</h3>
-        <h3>
-            <b-badge class="m-1" :variant="k in sync_token?'success':'danger'" v-for="(v,k) in servers" :key="k">
-                {{ v }}
-            </b-badge>
-        </h3>
-        <b-btn block variant="info" @click="show_input=!show_input">设置令牌</b-btn>
-        <b-modal title="设置令牌" v-model="show_input" centered hide-footer>
-            <b-form-file
-                v-model="file1"
-                :state="Boolean(file1)"
-                placeholder="请选取令牌文件"
-            ></b-form-file>
-            <b-btn class="m-2" :disabled="!file1" @click="save_token()" block>储存</b-btn>
-        </b-modal>
-    </div>
+    <b-tabs align="center" pills active-tab-class="m-3"
+            active-nav-item-class="font-weight-bold"
+            style="max-width: 90%;">
+        <b-tab title="令牌" active>
+            <b-row>
+                <b-col>
+                    <h3>已加载令牌：</h3>
+                </b-col>
+                <b-col class="text-right">
+                    <b-form-checkbox v-model="auto_upload" switch>
+                        启用自动上传
+                    </b-form-checkbox>
+                </b-col>
+            </b-row>
+            <h3>
+                <b-badge class="m-1" :variant="k in sync_token?'success':'danger'" v-for="(v,k) in servers" :key="k">
+                    {{ v }}
+                </b-badge>
+            </h3>
+            <b-btn block variant="info" @click="show_input=!show_input">设置令牌</b-btn>
+            <b-modal title="设置令牌" v-model="show_input" centered hide-footer>
+                <b-form-file
+                    v-model="file1"
+                    :state="Boolean(file1)"
+                    placeholder="请选取令牌文件"
+                ></b-form-file>
+                <b-btn class="m-2" :disabled="!file1" @click="save_token()" block>储存</b-btn>
+            </b-modal>
+        </b-tab>
+        <b-tab title="历史">
+            <b-row>
+                <b-col>
+                    <h3>本地空房记录{{ empty_array.length }}条</h3>
+                </b-col>
+                <b-col class="text-right">
+                    <b-form-select @change="reload_array()" v-model="show_level"
+                                   :options="size_options" style="max-width: 150px"/>
+                    <b-btn v-b-tooltip.hover title="清除记录"
+                           class="mx-2" @click="empty_record=[]" variant="outline-danger">
+                        <b-icon-trash/>
+                    </b-btn>
+                </b-col>
+            </b-row>
+            <b-table striped hover :items="empty_array" :busy="empty_array.length<1" :fields="on_sale_fields"
+                     table-class="text-center">
+                <template #cell(record_time)="data" class="text-right">
+                    <time-badge :ts="data.value"/>
+                </template>
+                <template #cell(house)="data" class="text-right">
+                    <house-label :house="data.item"/>
+                </template>
+                <template #cell(price)="data">
+                    {{ data.value }} Gil
+                </template>
+                <template #cell(size)="data">
+                    {{ house_size(data.value) }}
+                </template>
+                <template #table-busy>
+                    <div class="text-center my-2">
+                        <strong>没有符合条件的空置记录...</strong>
+                    </div>
+                </template>
+            </b-table>
+        </b-tab>
+    </b-tabs>
 </template>
 
 <script lang="ts">
 import {Component, Vue} from 'vue-property-decorator';
 import {addOverlayListener, removeOverlayListener} from "@/libs/Ngld";
 import {sync_ngld} from "@/axios";
-import {servers, territories,HouseSimple} from "@/libs/WardLandDefine";
+import {servers, territories, HouseSimple, house_size} from "@/libs/WardLandDefine";
 import {toast} from "@/libs/toast_bv";
 import {sign} from "@/libs/encrypt"
-
+import HouseLabel from "@/components/HouseLabel.vue";
+import TimeBadge from "@/components/TimeBadge.vue";
 
 interface StoreToken {
     [world_id: string]: string
@@ -39,13 +88,67 @@ interface WardLandInfo {
     houses: HouseSimple[]
 }
 
+interface HouseEmptyData {
+    record_time: number
+    server: number
+    house_id: number
+    ward_id: number
+    territory_id: number
+    price: number
+    size: number
+}
 
-@Component
+@Component({
+    components: {
+        HouseLabel,
+        TimeBadge
+    }
+})
 export default class Ngld extends Vue {
     file1: null = null;
     show_input = false;
     sync_token: StoreToken = {}
     servers = servers
+    auto_upload = true
+    empty_record: { [key: string]: HouseEmptyData } = {}
+    empty_array: HouseEmptyData[] = []
+    show_level = 0
+    house_size = house_size
+    on_sale_fields = [
+        {
+            key: 'record_time',
+            label: '记录时间'
+        },
+        {
+            key: 'house',
+            label: '空置房屋'
+        },
+        {
+            key: 'price',
+            class: "d-none d-sm-block",
+            label: "价钱",
+            sortable: true
+        },
+        {
+            key: 'size',
+            label: '房型',
+            sortable: true,
+        },
+    ]
+    size_options = [
+        {value: 0, text: '所有'},
+        {value: 1, text: 'M,L'},
+        {value: 2, text: '只需L'},
+    ]
+
+    _house_size(price: number) {
+        if (price < 4000000)
+            return 1
+        else if (price <= 20000000)
+            return 2
+        else
+            return 3
+    }
 
     save_token() {
         const reader = new FileReader();
@@ -67,7 +170,15 @@ export default class Ngld extends Vue {
         reader.readAsText((this.file1 as any));
     }
 
+    reload_array() {
+        this.empty_array = []
+        for (var key in this.empty_record)
+            if (this.empty_record[key].size > this.show_level)
+                this.empty_array.push(this.empty_record[key])
+    }
+
     cb(data: any) {
+        const current_time = +new Date()
         const line: string[] = data.line;
         if (line[0] !== "252" || !line[6].startsWith('0141')) return;
         const buffer = new Uint32Array(line.length);
@@ -87,18 +198,36 @@ export default class Ngld extends Vue {
             let owner = decoder.decode(new Uint32Array(buffer.slice(start_idx + 2, start_idx + 10)))
                 .replace(/\u0000+$/, '');
             if (buffer[start_idx + 1] & 0b10000) owner = `《${owner}》`;
-            ward_land_info.houses.push({price: buffer[start_idx], owner: owner});
-        }
-        //console.log(ward_land_info)
-        if (ward_land_info.server in this.sync_token) {
-            const sync_data = sign(this.sync_token[ward_land_info.server], ward_land_info.houses)
-            sync_ngld(ward_land_info.server, ward_land_info.territory_id, ward_land_info.ward_id, sync_data).then(res => {
-                if (res) toast.show(`${servers[ward_land_info.server]} ${territories[ward_land_info.territory_id].short}${ward_land_info.ward_id + 1} 上传成功`)
+            const price = buffer[start_idx];
 
-            })
-        } else {
-            toast.show(`未加载 ${servers[ward_land_info.server]} 令牌，不能进行上传`)
+            const key = `${ward_land_info.server}|${ward_land_info.territory_id}|${ward_land_info.ward_id}|${ward_land_info.houses.length}`
+
+            if (!owner)
+                if (key in this.empty_record) this.empty_record[key].price = price
+                else this.empty_record[key] = {
+                    record_time: current_time,
+                    house_id: ward_land_info.houses.length,
+                    ward_id: ward_land_info.ward_id,
+                    territory_id: ward_land_info.territory_id,
+                    server: ward_land_info.server,
+                    price: price,
+                    size: this._house_size(price),
+                }
+            else if (key in this.empty_record) delete this.empty_record[key]
+            ward_land_info.houses.push({price: price, owner: owner});
         }
+        this.reload_array()
+        //console.log(ward_land_info)
+        if (this.auto_upload)
+            if (ward_land_info.server in this.sync_token) {
+                const sync_data = sign(this.sync_token[ward_land_info.server], ward_land_info.houses)
+                sync_ngld(ward_land_info.server, ward_land_info.territory_id, ward_land_info.ward_id, sync_data).then(res => {
+                    if (res) toast.show(`${servers[ward_land_info.server]} ${territories[ward_land_info.territory_id].short}${ward_land_info.ward_id + 1} 上传成功`)
+
+                })
+            } else {
+                toast.show(`未加载 ${servers[ward_land_info.server]} 令牌，不能进行上传`)
+            }
     }
 
     mounted() {
@@ -114,5 +243,4 @@ export default class Ngld extends Vue {
 </script>
 
 <style scoped>
-
 </style>
