@@ -2,6 +2,23 @@ from functools import wraps
 from . import Schema, Returns, Recaptcha, Config
 from django.http import QueryDict
 
+require_version = int(Config.config.get('django', 'api-version', fallback='0'))
+
+
+def version_check(func):
+    if not require_version: return func
+
+    def warpper(request, *args, **kwargs):
+        try:
+            request_version = int(request.COOKIES.get('api-version', '0'))
+        except ValueError:
+            return Returns.param_input_error('api version should be numeric')
+        if request_version < require_version:
+            return Returns.version_error(require_version)
+        return func(request, *args, **kwargs)
+
+    return warpper
+
 
 def require_method(request_method_list):
     if type(request_method_list) != list:

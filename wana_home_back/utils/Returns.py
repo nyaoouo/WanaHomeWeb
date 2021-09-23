@@ -33,3 +33,7 @@ def param_input_error(msg='parameter given is invalid'):
 
 def require_captcha(captcha_type: str, captcha_public_key: str):
     return client_error("require captcha", code=403, status=403, type=captcha_type, key=captcha_public_key)
+
+
+def version_error(require_version):
+    return client_error("require version %s" % require_version, code=409, status=409)

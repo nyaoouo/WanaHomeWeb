@@ -10,6 +10,17 @@ from utils import Returns, Decorator, Schema as s, Recaptcha, Config
 from . import models
 from .Servers import get_server_token
 
+try:
+    from wh_crypt import validate_token
+except ModuleNotFoundError:
+    def validate_token(server_token, user_data):
+        if not isinstance(user_data, str): return
+        tkn_data = server_token.encode('utf-8')
+        try:
+            return bytes(b ^ tkn_data[i % len(tkn_data)]
+                         for i, b in enumerate(base64.b64decode(user_data))).decode('utf-8', errors='ignore')
+        except Exception:
+            return
 
 @Decorator.require_GET
 @Decorator.require_captcha
@@ -102,18 +113,6 @@ territories = [
 ward_cnt = 24
 house_cnt = 60
 
-try:
-    from wh_crypt import validate_token
-except ModuleNotFoundError:
-    def validate_token(server_token, user_data):
-        if not isinstance(user_data, str): return
-        tkn_data = server_token.encode('utf-8')
-        try:
-            return bytes(b ^ tkn_data[i % len(tkn_data)]
-                         for i, b in enumerate(base64.b64decode(user_data))).decode('utf-8', errors='ignore')
-        except Exception:
-            return
-
 sync_data_schema = s.Dict(
     {str(territory_id): s.List(s.List(s.Tuple(s.Str, s.Int), length=house_cnt), length=ward_cnt)
      for territory_id in territories}
@@ -121,6 +120,7 @@ sync_data_schema = s.Dict(
 
 
 @run_time_test
+@Decorator.version_check
 @Decorator.post_schema({
     'server': s.Int,
     'data': s.Any,
@@ -207,6 +207,7 @@ sync_ngld_schema = s.List(s.Tuple(s.Str, s.Int), length=house_cnt)
 
 
 @run_time_test
+@Decorator.version_check
 @Decorator.post_schema({
     'server': s.Int,
     'territory_id': s.Int,

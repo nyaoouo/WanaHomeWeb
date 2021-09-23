@@ -1,6 +1,9 @@
 import axios from "axios";
 import router from "@/router";
 import {toast} from "@/libs/toast_bv";
+import Cookies from 'js-cookie';
+
+Cookies.set('api-version', '1')
 
 const api = axios.create({
     withCredentials: true,
