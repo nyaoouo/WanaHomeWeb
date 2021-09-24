@@ -52,7 +52,7 @@ type VoidFunc<T> = (...args: T[]) => void;
 
 export let inited = false;
 
-let wsUrl: RegExpExecArray | null = null;
+let wsUrl: string | null = null;
 let ws: WebSocket | null = null;
 let queue: (
     | { [s: string]: unknown }
@@ -60,6 +60,7 @@ let queue: (
     )[] | null = [];
 let rseqCounter = 0;
 const responsePromises: Record<number, (value: unknown) => void> = {};
+const urlParams = new URLSearchParams(window.location.search);
 
 export const subscribers: Subscriber<VoidFunc<unknown>> = {};
 
@@ -200,10 +201,12 @@ export const init = (): void => {
         return;
 
     if (typeof window !== 'undefined') {
-        wsUrl = /[\?&]OVERLAY_WS=([^&]+)/.exec(window.location.href);
-        if (wsUrl) {
+        wsUrl = urlParams.get('OVERLAY_WS');
+        if (wsUrl !== null) {
             const connectWs = function () {
-                ws = new WebSocket(decodeURIComponent(wsUrl?.[1] as string));
+                if(wsUrl === null)
+                    throw new TypeError('wsUrl is null, a string is required');
+                ws = new WebSocket(wsUrl);
 
                 ws.addEventListener('error', (e) => {
                     console.error(e);

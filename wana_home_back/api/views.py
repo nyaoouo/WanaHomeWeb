@@ -1,14 +1,18 @@
 import time
 import base64
+from functools import lru_cache
 from inspect import getfile, getsourcelines
+from datetime import datetime, timedelta
 
 from django.db import transaction
-from django.http import HttpResponse, QueryDict
+from django.http import HttpResponse
 from django.conf import settings
 
 from utils import Returns, Decorator, Schema as s, Recaptcha, Config
 from . import models
 from .Servers import get_server_token
+
+one_day = timedelta(days=1)
 
 try:
     from wh_crypt import validate_token
@@ -21,6 +25,14 @@ except ModuleNotFoundError:
                          for i, b in enumerate(base64.b64decode(user_data))).decode('utf-8', errors='ignore')
         except Exception:
             return
+
+
+@lru_cache(maxsize=1024)
+def get_house_price_check_time(timestamp):
+    check_dt = datetime.fromtimestamp(timestamp)
+    if check_dt.hour >= 2: check_dt += one_day
+    return check_dt.replace(hour=2, minute=1, second=0).timestamp()
+
 
 @Decorator.require_GET
 @Decorator.require_captcha
@@ -158,39 +170,34 @@ def sync_data(request):
                         )
                     )
                     continue
-                if old_owner != new_owner or old_price != new_price:
-                    dbo = models.HouseState.objects.get(server=server, territory_id=territory_id, ward_id=ward_id,
-                                                        house_id=house_id)
+                if old_owner != new_owner or not old_owner:
+                    dbo = models.HouseState.objects.get(server=server, territory_id=territory_id, ward_id=ward_id, house_id=house_id)
                     if old_owner != new_owner:
                         if old_owner and new_owner:
-                            new_change_record.append(
-                                models.ChangeRecord(house=dbo, event_type="change_owner", param1=old_owner,
-                                                    param2=new_owner, record_time=current_time))
+                            new_change_record.append(models.ChangeRecord(house=dbo, event_type="change_owner",
+                                                                         param1=old_owner, param2=new_owner, record_time=current_time))
                         else:
                             if old_owner:
-                                new_change_record.append(
-                                    models.ChangeRecord(house=dbo, event_type="start_selling", param1=old_owner,
-                                                        param2=str(new_price), record_time=current_time, ))
+                                new_change_record.append(models.ChangeRecord(house=dbo, event_type="start_selling",
+                                                                             param1=old_owner, param2=str(new_price), record_time=current_time))
                                 dbo.start_sell = current_time
-                                dbo.save()
                             else:
-                                new_change_record.append(
-                                    models.ChangeRecord(house=dbo, event_type="sold", param1=new_owner,
-                                                        record_time=current_time, ))
+                                new_change_record.append(models.ChangeRecord(house=dbo, event_type="sold",
+                                                                             param1=new_owner, param2=str(current_time - dbo.start_sell),
+                                                                             record_time=current_time))
                                 dbo.start_sell = 0
-                                dbo.save()
+                    elif old_price > new_price:
+                        new_change_record.append(
+                            models.ChangeRecord(house=dbo, event_type="price_reduce", param1=str(old_price),
+                                                param2=str(new_price), record_time=current_time, ))
+                    elif old_price < new_price or get_house_price_check_time(dbo.start_sell) < current_time:
+                        new_change_record.append(
+                            models.ChangeRecord(house=dbo, event_type="price_refresh", param1=str(new_price),
+                                                record_time=current_time, ))
+                        dbo.start_sell = current_time
                     else:
-                        if old_price > new_price:
-                            new_change_record.append(
-                                models.ChangeRecord(house=dbo, event_type="price_reduce", param1=str(old_price),
-                                                    param2=str(new_price), record_time=current_time, ))
-                        else:
-                            new_change_record.append(
-                                models.ChangeRecord(house=dbo, event_type="price_refresh", param1=str(new_price),
-                                                    record_time=current_time, ))
+                        continue
 
-                            dbo.start_sell = current_time
-                            dbo.save()
                     dbo.price = new_price
                     dbo.owner = new_owner
                     dbo.save()
@@ -250,7 +257,7 @@ def sync_ngld(request):
                 )
             )
             continue
-        if old_owner != new_owner or old_price != new_price:
+        if old_owner != new_owner or not old_owner:
             dbo = models.HouseState.objects.get(server=server, territory_id=territory_id, ward_id=ward_id, house_id=house_id)
             if old_owner != new_owner:
                 if old_owner and new_owner:
@@ -261,24 +268,23 @@ def sync_ngld(request):
                         new_change_record.append(models.ChangeRecord(house=dbo, event_type="start_selling",
                                                                      param1=old_owner, param2=str(new_price), record_time=current_time))
                         dbo.start_sell = current_time
-                        dbo.save()
                     else:
                         new_change_record.append(models.ChangeRecord(house=dbo, event_type="sold",
-                                                                     param1=new_owner, record_time=current_time))
+                                                                     param1=new_owner, param2=str(current_time - dbo.start_sell),
+                                                                     record_time=current_time))
                         dbo.start_sell = 0
-                        dbo.save()
+            elif old_price > new_price:
+                new_change_record.append(
+                    models.ChangeRecord(house=dbo, event_type="price_reduce", param1=str(old_price),
+                                        param2=str(new_price), record_time=current_time, ))
+            elif old_price < new_price or get_house_price_check_time(dbo.start_sell) < current_time:
+                new_change_record.append(
+                    models.ChangeRecord(house=dbo, event_type="price_refresh", param1=str(new_price),
+                                        record_time=current_time, ))
+                dbo.start_sell = current_time
             else:
-                if old_price > new_price:
-                    new_change_record.append(
-                        models.ChangeRecord(house=dbo, event_type="price_reduce", param1=str(old_price),
-                                            param2=str(new_price), record_time=current_time, ))
-                else:
-                    new_change_record.append(
-                        models.ChangeRecord(house=dbo, event_type="price_refresh", param1=str(new_price),
-                                            record_time=current_time, ))
+                continue
 
-                    dbo.start_sell = current_time
-                    dbo.save()
             dbo.price = new_price
             dbo.owner = new_owner
             dbo.save()

@@ -23,8 +23,7 @@ export function date_format(date: Date, format_string: string) {
     })
 }
 
-export function time_diff(time: number, eng = true) {
-    var diff_sec = Math.round(+new Date() / 1000) - time
+export function time_diff_sec(diff_sec: number, eng = true) {
     var rtn = ''
     if (diff_sec >= 3600) {
         rtn += `${Math.round(diff_sec / 3600)}${eng ? 'h' : '小时'}`;
@@ -36,4 +35,8 @@ export function time_diff(time: number, eng = true) {
     }
     rtn += `${diff_sec}${eng ? 's' : '秒'}`;
     return rtn
+}
+
+export function time_diff(time: number, eng = true) {
+    return time_diff_sec(Math.round(+new Date() / 1000) - time, eng)
 }
