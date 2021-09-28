@@ -125,6 +125,10 @@ territories = [
 ward_cnt = 24
 house_cnt = 60
 
+full_price = {3000000, 3187500, 3375000, 3562500, 3750000,
+              16000000, 17000000, 18000000, 19000000, 20000000,
+              40000000, 42500000, 45000000, 47500000, 50000000, }
+
 sync_data_schema = s.Dict(
     {str(territory_id): s.List(s.List(s.Tuple(s.Str, s.Int), length=house_cnt), length=ward_cnt)
      for territory_id in territories}
@@ -190,10 +194,11 @@ def sync_data(request):
                         new_change_record.append(
                             models.ChangeRecord(house=dbo, event_type="price_reduce", param1=str(old_price),
                                                 param2=str(new_price), record_time=current_time, ))
-                    elif old_price < new_price or get_house_price_check_time(dbo.start_sell) < current_time:
-                        new_change_record.append(
-                            models.ChangeRecord(house=dbo, event_type="price_refresh", param1=str(new_price),
-                                                record_time=current_time, ))
+                    elif old_price < new_price or new_price in full_price and get_house_price_check_time(dbo.start_sell) < current_time:
+                        new_change_record.append(models.ChangeRecord(house=dbo, event_type="price_refresh",
+                                                                     param1=f"{old_price}/{dbo.start_sell}/{get_house_price_check_time(dbo.start_sell)}",
+                                                                     param2=f"{new_owner}/{new_price}/{current_time}",
+                                                                     record_time=current_time))
                         dbo.start_sell = current_time
                     else:
                         continue
@@ -277,10 +282,11 @@ def sync_ngld(request):
                 new_change_record.append(
                     models.ChangeRecord(house=dbo, event_type="price_reduce", param1=str(old_price),
                                         param2=str(new_price), record_time=current_time, ))
-            elif old_price < new_price or get_house_price_check_time(dbo.start_sell) < current_time:
-                new_change_record.append(
-                    models.ChangeRecord(house=dbo, event_type="price_refresh", param1=str(new_price),
-                                        record_time=current_time, ))
+            elif old_price < new_price or new_price in full_price and get_house_price_check_time(dbo.start_sell) < current_time:
+                new_change_record.append(models.ChangeRecord(house=dbo, event_type="price_refresh",
+                                                             param1=f"{old_price}/{dbo.start_sell}/{get_house_price_check_time(dbo.start_sell)}",
+                                                             param2=f"{new_price}/{current_time}",
+                                                             record_time=current_time))
                 dbo.start_sell = current_time
             else:
                 continue

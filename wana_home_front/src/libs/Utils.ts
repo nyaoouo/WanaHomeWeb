@@ -15,7 +15,7 @@ export function string_format(str: string, args: { [k: string]: any }) {
 export function date_format(date: Date, format_string: string) {
     return string_format(format_string, {
         Y: date.getFullYear().toString().substr(2),
-        M: zero_pad(date.getMonth(), 2),
+        M: zero_pad(date.getMonth() + 1, 2),
         D: zero_pad(date.getDate(), 2),
         H: zero_pad(date.getHours(), 2),
         I: zero_pad(date.getMinutes(), 2),

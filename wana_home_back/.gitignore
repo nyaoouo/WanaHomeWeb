@@ -4,6 +4,7 @@ upload.ini
 gen.upload.ini
 scripts/
 ignore*
+wh_crypt.py
 
 ### Python template
 # Byte-compiled / optimized / DLL files
