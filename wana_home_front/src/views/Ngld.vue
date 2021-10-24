@@ -1,8 +1,45 @@
 <template>
     <b-tabs align="center" pills active-tab-class="m-3"
             active-nav-item-class="font-weight-bold"
-            style="max-width: 90%;">
-        <b-tab title="令牌" active>
+            style="max-width: calc(100% - 5px);height: calc(100vh - 5px);">
+        <b-tab title="记录" active>
+            <b-row>
+                <b-col>
+                    <h3>本地空房记录{{ empty_array.length }}条</h3>
+                </b-col>
+                <b-col class="text-right">
+                    <b-badge>使用音效</b-badge>
+                    <b-form-checkbox class="py-1" switch v-model="use_alarm" inline/>
+                    <b-form-select @change="reload_array()" v-model="show_level"
+                                   :options="size_options" style="max-width: 150px"/>
+                    <b-btn v-b-tooltip.hover title="清除记录"
+                           class="mx-2" @click="empty_record={};empty_array=[];" variant="outline-danger">
+                        <b-icon-trash/>
+                    </b-btn>
+                </b-col>
+            </b-row>
+            <b-table striped hover :items="empty_array" :busy="empty_array.length<1" :fields="on_sale_fields"
+                     table-class="text-center" tbody-class="smr">
+                <template #cell(record_time)="data" class="text-right">
+                    <time-badge :ts="data.value"/>
+                </template>
+                <template #cell(house)="data" class="text-right">
+                    <house-label :house="data.item"/>
+                </template>
+                <template #cell(price)="data">
+                    {{ data.value }} Gil
+                </template>
+                <template #cell(size)="data">
+                    {{ house_size(data.value) }}
+                </template>
+                <template #table-busy>
+                    <div class="text-center my-2">
+                        <strong>没有符合条件的空置记录...</strong>
+                    </div>
+                </template>
+            </b-table>
+        </b-tab>
+        <b-tab title="令牌">
             <b-row>
                 <b-col>
                     <h3>已加载令牌：</h3>
@@ -28,41 +65,6 @@
                 <b-btn class="m-2" :disabled="!file1" @click="save_token()" block>储存</b-btn>
             </b-modal>
         </b-tab>
-        <b-tab title="历史">
-            <b-row>
-                <b-col>
-                    <h3>本地空房记录{{ empty_array.length }}条</h3>
-                </b-col>
-                <b-col class="text-right">
-                    <b-form-select @change="reload_array()" v-model="show_level"
-                                   :options="size_options" style="max-width: 150px"/>
-                    <b-btn v-b-tooltip.hover title="清除记录"
-                           class="mx-2" @click="empty_record={};empty_array=[];" variant="outline-danger">
-                        <b-icon-trash/>
-                    </b-btn>
-                </b-col>
-            </b-row>
-            <b-table striped hover :items="empty_array" :busy="empty_array.length<1" :fields="on_sale_fields"
-                     table-class="text-center">
-                <template #cell(record_time)="data" class="text-right">
-                    <time-badge :ts="data.value"/>
-                </template>
-                <template #cell(house)="data" class="text-right">
-                    <house-label :house="data.item"/>
-                </template>
-                <template #cell(price)="data">
-                    {{ data.value }} Gil
-                </template>
-                <template #cell(size)="data">
-                    {{ house_size(data.value) }}
-                </template>
-                <template #table-busy>
-                    <div class="text-center my-2">
-                        <strong>没有符合条件的空置记录...</strong>
-                    </div>
-                </template>
-            </b-table>
-        </b-tab>
     </b-tabs>
 </template>
 
@@ -71,7 +73,6 @@ import {Component, Vue} from 'vue-property-decorator';
 import {addOverlayListener, removeOverlayListener} from "@/libs/Ngld";
 import {sync_ngld} from "@/axios";
 import {servers, territories, HouseSimple, house_size} from "@/libs/WardLandDefine";
-import {toast} from "@/libs/toast_bv";
 import {sign} from "@/libs/encrypt"
 import HouseLabel from "@/components/HouseLabel.vue";
 import TimeBadge from "@/components/TimeBadge.vue";
@@ -116,8 +117,9 @@ export default class Ngld extends Vue {
     house_size = house_size
     on_sale_fields = [
         {
-            key: 'record_time',
-            label: '记录时间'
+            key: 'size',
+            label: '房型',
+            sortable: true,
         },
         {
             key: 'house',
@@ -130,9 +132,8 @@ export default class Ngld extends Vue {
             sortable: true
         },
         {
-            key: 'size',
-            label: '房型',
-            sortable: true,
+            key: 'record_time',
+            label: '记录时间'
         },
     ]
     size_options = [
@@ -140,6 +141,8 @@ export default class Ngld extends Vue {
         {value: 1, text: 'M,L'},
         {value: 2, text: '只需L'},
     ]
+    alarm = new Audio("/alarm.mp3")
+    use_alarm = true
 
     _house_size(price: number) {
         if (price < 4000000)
@@ -193,42 +196,54 @@ export default class Ngld extends Vue {
             houses: []
         };
         const decoder = new TextDecoder();
+        let has_record = false
         for (let i = 0; i < 60; i++) {
             const start_idx = 2 + i * 10;
             let owner = decoder.decode(new Uint32Array(buffer.slice(start_idx + 2, start_idx + 10)))
                 .replace(/\u0000+$/, '');
             const price = buffer[start_idx];
-
             const key = `${ward_land_info.server}|${ward_land_info.territory_id}|${ward_land_info.ward_id}|${ward_land_info.houses.length}`
-
-            if (!owner)
+            const size = this._house_size(price)
+            if (!owner) {
+                if (size > this.show_level) has_record = true;
                 if (key in this.empty_record) this.empty_record[key].price = price
-                else this.empty_record[key] = {
-                    record_time: current_time,
-                    house_id: ward_land_info.houses.length,
-                    ward_id: ward_land_info.ward_id,
-                    territory_id: ward_land_info.territory_id,
-                    server: ward_land_info.server,
-                    price: price,
-                    size: this._house_size(price),
+                else {
+                    this.empty_record[key] = {
+                        record_time: current_time,
+                        house_id: ward_land_info.houses.length,
+                        ward_id: ward_land_info.ward_id,
+                        territory_id: ward_land_info.territory_id,
+                        server: ward_land_info.server,
+                        price: price,
+                        size: size,
+                    }
                 }
-            else {
+            } else {
                 if (key in this.empty_record) delete this.empty_record[key]
                 if (buffer[start_idx + 1] & 0b10000) owner = `《${owner}》`;
             }
             ward_land_info.houses.push({price: price, owner: owner});
         }
+        if (has_record && this.use_alarm) {
+            console.log("play")
+            this.alarm.play()
+        }
         this.reload_array()
-        //console.log(ward_land_info)
+        console.log(ward_land_info)
         if (this.auto_upload)
             if (ward_land_info.server in this.sync_token) {
                 const sync_data = sign(this.sync_token[ward_land_info.server], ward_land_info.houses)
                 sync_ngld(ward_land_info.server, ward_land_info.territory_id, ward_land_info.ward_id, sync_data).then(res => {
-                    if (res) toast.show(`${servers[ward_land_info.server]} ${territories[ward_land_info.territory_id].short}${ward_land_info.ward_id + 1} 上传成功`)
-
-                })
+                    if (res)
+                        console.log(`${servers[ward_land_info.server]} ${territories[ward_land_info.territory_id].short}${ward_land_info.ward_id + 1} 上传成功`)
+                }).catch(err => this.$bvToast.toast(err, {
+                    title: "上传失败",
+                    autoHideDelay: 1000
+                }))
             } else {
-                toast.show(`未加载 ${servers[ward_land_info.server]} 令牌，不能进行上传`)
+                this.$bvToast.toast(`未加载 ${servers[ward_land_info.server]} 令牌，不能进行上传`, {
+                    autoHideDelay: 1000
+                })
             }
     }
 
@@ -244,5 +259,9 @@ export default class Ngld extends Vue {
 }
 </script>
 
-<style scoped>
+<style>
+.smr td {
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
 </style>
