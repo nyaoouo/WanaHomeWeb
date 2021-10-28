@@ -8,8 +8,11 @@
                     <h3>本地空房记录{{ empty_array.length }}条</h3>
                 </b-col>
                 <b-col class="text-right">
-                    <b-badge>使用音效</b-badge>
-                    <b-form-checkbox class="py-1" switch v-model="use_alarm" inline/>
+                    使用音效：
+                    <b-form-select v-if="use_alarm" v-model="sound_level" :options="size_options" style="max-width: 150px"/>
+                    <b-form-checkbox class="py-1" button :button-variant="use_alarm?'info':'outline-info'" v-model="use_alarm" inline>
+                        <b-icon-bell/>
+                    </b-form-checkbox>&nbsp;
                     <b-form-select @change="reload_array()" v-model="show_level"
                                    :options="size_options" style="max-width: 150px"/>
                     <b-btn v-b-tooltip.hover title="清除记录"
@@ -114,6 +117,7 @@ export default class Ngld extends Vue {
     empty_record: { [key: string]: HouseEmptyData } = {}
     empty_array: HouseEmptyData[] = []
     show_level = 0
+    sound_level = 1
     house_size = house_size
     on_sale_fields = [
         {
@@ -205,7 +209,7 @@ export default class Ngld extends Vue {
             const key = `${ward_land_info.server}|${ward_land_info.territory_id}|${ward_land_info.ward_id}|${ward_land_info.houses.length}`
             const size = this._house_size(price)
             if (!owner) {
-                if (size > this.show_level) has_record = true;
+                if (size > this.sound_level) has_record = true;
                 if (key in this.empty_record) this.empty_record[key].price = price
                 else {
                     this.empty_record[key] = {
@@ -224,10 +228,7 @@ export default class Ngld extends Vue {
             }
             ward_land_info.houses.push({price: price, owner: owner});
         }
-        if (has_record && this.use_alarm) {
-            console.log("play")
-            this.alarm.play()
-        }
+        if (has_record && this.use_alarm) this.alarm.play()
         this.reload_array()
         console.log(ward_land_info)
         if (this.auto_upload)
