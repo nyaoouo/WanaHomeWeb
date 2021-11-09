@@ -156,6 +156,7 @@ export default class Ngld extends Vue {
         else
             return 3
     }
+    opcode = "292"
 
     save_token() {
         const reader = new FileReader();
@@ -187,7 +188,7 @@ export default class Ngld extends Vue {
     cb(data: any) {
         const current_time = +new Date()
         const line: string[] = data.line;
-        if (line[0] !== "252" || !line[6].startsWith('0249')) return;
+        if (line[0] !== this.opcode || !line[6].startsWith('0249')) return;
         const buffer = new Uint32Array(line.length);
         line.slice(10).forEach((str, idx) => {
             buffer[idx] = parseInt(str, 16)
