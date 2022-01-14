@@ -79,6 +79,7 @@ import {servers, territories, HouseSimple, house_size} from "@/libs/WardLandDefi
 import {sign} from "@/libs/encrypt"
 import HouseLabel from "@/components/HouseLabel.vue";
 import TimeBadge from "@/components/TimeBadge.vue";
+import axios from "axios";
 
 interface StoreToken {
     [world_id: string]: string
@@ -156,6 +157,7 @@ export default class Ngld extends Vue {
         else
             return 3
     }
+
     opcode = "0292"
 
     save_token() {
@@ -204,8 +206,8 @@ export default class Ngld extends Vue {
         let has_record = false
         for (let i = 0; i < 60; i++) {
             const start_idx = 2 + i * 10;
-            let owner = decoder.decode(new Uint32Array(buffer.slice(start_idx + 2, start_idx + 10)))
-                .replace(/\u0000+$/, '');
+            let owner_buffer = new Uint8Array((buffer.slice(start_idx+2, start_idx+10)).buffer);
+            let owner = decoder.decode(owner_buffer.slice(0, owner_buffer.indexOf(0))).replace(/\u0000+$/, '');
             const price = buffer[start_idx];
             const key = `${ward_land_info.server}|${ward_land_info.territory_id}|${ward_land_info.ward_id}|${ward_land_info.houses.length}`
             const size = this._house_size(price)
@@ -250,6 +252,10 @@ export default class Ngld extends Vue {
     }
 
     mounted() {
+        axios.get('/opcode.txt').then(res => {
+            this.opcode = res.data.trim()
+            console.log(`opcode: ${this.opcode}`)
+        })
         const data = localStorage.getItem('sync_token')
         if (data) this.sync_token = JSON.parse(data)
         addOverlayListener('LogLine', this.cb);
