@@ -6,15 +6,18 @@ export interface House {
     'price': number,
     'owner': string,
 }
+
 export interface HouseSimple {
     price: number
     owner: string
 }
+
 export const territories: { [k: number]: { full: string, short: string } } = {
     339: {full: "海雾村", short: "海"},
     341: {full: "高脚孤丘", short: "沙"},
     340: {full: "薰衣草苗园", short: "森"},
     641: {full: "白银乡", short: "白"},
+    979: {full: "雪景房", short: "雪"},
 }
 export const ward_cnt = 24
 export const house_cnt = 60
@@ -58,9 +61,16 @@ export const dc_server = [
             1179: "琥珀原"
         }
     },
+    {
+        "dc_name": "豆豆柴",
+        "servers": {
+            1183: "银泪湖",
+            1192: "水晶塔",
+        }
+    },
 ]
 
-export const servers:{[key:number]:string} = {
+export const servers: { [key: number]: string } = {
     1042: "拉诺西亚",
     1044: "幻影群岛",
     1060: "萌芽池",
@@ -83,7 +93,9 @@ export const servers:{[key:number]:string} = {
     1169: "延夏",
     1177: "海猫茶屋",
     1178: "柔风海湾",
-    1179: "琥珀原"
+    1179: "琥珀原",
+    1183: "银泪湖",
+    1192: "水晶塔",
 }
 
 export function house_size(size_id: number) {
