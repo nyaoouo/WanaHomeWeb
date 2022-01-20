@@ -188,7 +188,7 @@ export default class Ngld extends Vue {
     }
 
     cb(data: any) {
-        const current_time = +new Date()
+        const current_time = Math.floor(Date.now() / 1000)
         const line: string[] = data.line;
         if (line[0] !== "252" || !line[6].startsWith(this.opcode)) return;
         const buffer = new Uint32Array(line.length);
