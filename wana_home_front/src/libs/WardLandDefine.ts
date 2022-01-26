@@ -66,6 +66,8 @@ export const dc_server = [
         "servers": {
             1183: "银泪湖",
             1192: "水晶塔",
+            1180: "太阳海岸",
+            1186: "伊修加德"
         }
     },
 ]
@@ -96,6 +98,8 @@ export const servers: { [key: number]: string } = {
     1179: "琥珀原",
     1183: "银泪湖",
     1192: "水晶塔",
+    1180: "太阳海岸",
+    1186: "伊修加德",
 }
 
 export function house_size(size_id: number) {
